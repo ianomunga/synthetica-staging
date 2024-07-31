@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
+import Link from 'next/link';
+import Image from 'next/image';
 
 const AuthPage = () => {
   const [email, setEmail] = useState('');
@@ -35,7 +37,11 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-      <h1 className="text-4xl font-bold text-center mb-8">Synthetica</h1>
+      <div>
+          <Link href="/" className="text-4xl font-bold text-center block">
+            Synthetica
+          </Link>
+        </div>
         {error && <p className="text-red-500 text-center">{error}</p>}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <input type="hidden" name="remember" value="true" />
