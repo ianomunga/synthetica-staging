@@ -33,7 +33,7 @@ const Navbar = () => {
           <span className="text-xl font-bold">Synthetica</span>
         </Link>
         <div className="space-x-6">
-          <a href="https://github.com/ianomunga/Synthetica/tree/main/datasets" className="text-gray-600 hover:text-gray-800" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/ianomunga/synthetica-staging/tree/main/datasets" className="text-gray-600 hover:text-gray-800" target="_blank" rel="noopener noreferrer">
             Datasets
           </a>
           {isAuthenticated && (
