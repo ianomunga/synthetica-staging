@@ -80,7 +80,7 @@ const EvaluationResultsLightbox: React.FC<{ isOpen: boolean, onClose: () => void
     onClose();
     router.push('/retrain');
   };
-};
+}
   
 const ModelUploadPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
