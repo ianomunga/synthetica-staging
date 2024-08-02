@@ -1,6 +1,6 @@
 // client/src/app/api/user/route.ts
 import { NextResponse } from 'next/server';
-import { getUser, executeQuery } from '../../../../../server/src/lib/db';
+import { getUser, updateUser } from '../../../../../server/src/lib/db';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,7 +13,8 @@ export async function GET(request: Request) {
   try {
     const user = await getUser(email);
     if (user) {
-      const { password, ...safeUser } = user;
+      // Remove sensitive information
+      const { hashedPassword, ...safeUser } = user;
       return NextResponse.json(safeUser);
     } else {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -25,19 +26,14 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const { email, ...updateData } = await request.json();
+  const { email, name } = await request.json();
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 });
   }
 
   try {
-    const query = `
-      UPDATE users
-      SET name = @param1
-      WHERE username = @param0
-    `;
-    await executeQuery(query, [email, updateData.name]);
+    await updateUser(email, { name });
     return NextResponse.json({ message: 'User updated successfully' });
   } catch (error) {
     console.error('Failed to update user:', error);

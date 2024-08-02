@@ -95,6 +95,34 @@ export async function createUser(email: string, hashedPassword: string, name: st
   }
 }
 
+// Add this function to your db.ts file
+
+export async function updateUser(email: string, updateData: Partial<User>): Promise<void> {
+  const command = new UpdateCommand({
+    TableName,
+    Key: {
+      PK: `USER#${email}`,
+      SK: `METADATA#${email}`,
+    },
+    UpdateExpression: 'SET #name = :name, lastUpdated = :lastUpdated',
+    ExpressionAttributeNames: {
+      '#name': 'name',
+    },
+    ExpressionAttributeValues: {
+      ':name': updateData.name,
+      ':lastUpdated': new Date().toISOString(),
+    },
+  });
+
+  try {
+    await docClient.send(command);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw error;
+  }
+}
+
+
 export async function getUserModels(email: string): Promise<Model[]> {
   console.log('getUserModels called with email:', email);
   console.log('AWS_REGION:', process.env.AWS_REGION);
@@ -224,3 +252,4 @@ export async function updateModelMetrics(email: string, modelName: string, metri
     throw error;
   }
 }
+
