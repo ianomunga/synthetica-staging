@@ -1,43 +1,46 @@
-// src/app/api/user/route.ts
+// client/src/app/api/user/route.ts
 import { NextResponse } from 'next/server';
-import { query, getUser } from '../../../../../server/src/lib/db';
+import { getUser, executeQuery } from '../../../../../server/src/lib/db';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
+  const email = searchParams.get('email');
 
-  if (!id) {
-    return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  if (!email) {
+    return NextResponse.json({ error: 'Email is required' }, { status: 400 });
   }
 
   try {
-    // For now, we'll use getUser instead of query since we're using a mock database
-    const user = await getUser(id);
+    const user = await getUser(email);
     if (user) {
-      // Remove sensitive information like password before sending
       const { password, ...safeUser } = user;
       return NextResponse.json(safeUser);
     } else {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
   } catch (error) {
+    console.error('Failed to fetch user:', error);
     return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
-  const { id, ...updateData } = await request.json();
+  const { email, ...updateData } = await request.json();
 
-  if (!id) {
-    return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  if (!email) {
+    return NextResponse.json({ error: 'Email is required' }, { status: 400 });
   }
 
   try {
-    // In a real database, you would update the user here
-    // For now, we'll just log the update
-    console.log('Updating user:', { id, ...updateData });
+    const query = `
+      UPDATE users
+      SET name = @param1
+      WHERE username = @param0
+    `;
+    await executeQuery(query, [email, updateData.name]);
     return NextResponse.json({ message: 'User updated successfully' });
   } catch (error) {
+    console.error('Failed to update user:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }

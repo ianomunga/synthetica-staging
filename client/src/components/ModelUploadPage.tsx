@@ -1,10 +1,12 @@
+// client/src/components/ModelUploadPage.tsx
 'use client';
 
 import React, { useState, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Navbar from '../components/Navbar';
-
+import Navbar from './Navbar';
+import { useAuth } from '../hooks/useAuth';
+import { useEffect } from 'react';
 
 // Placeholder evaluation data
 const placeholderEvalData = {
@@ -62,7 +64,7 @@ const MultiSelect: React.FC<{
   );
 };
 
-const EvaluationResultsLightbox = ({ isOpen, onClose, evalData }: { isOpen: boolean, onClose: () => void, evalData: any }) => {
+const EvaluationResultsLightbox: React.FC<{ isOpen: boolean, onClose: () => void, evalData: any }> = ({ isOpen, onClose, evalData }) => {
   const router = useRouter();
 
   if (!isOpen) return null;
@@ -78,61 +80,23 @@ const EvaluationResultsLightbox = ({ isOpen, onClose, evalData }: { isOpen: bool
     onClose();
     router.push('/retrain');
   };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-8 rounded-lg max-w-2xl w-full">
-        <h2 className="text-2xl font-bold mb-4">{evalData.modelName}</h2>
-        <table className="w-full mb-6">
-          <tbody>
-            <tr>
-              <td className="font-semibold">Accuracy:</td>
-              <td>{evalData.accuracy}</td>
-            </tr>
-            <tr>
-              <td className="font-semibold">Precision:</td>
-              <td>{evalData.precision}</td>
-            </tr>
-            <tr>
-              <td className="font-semibold">Recall:</td>
-              <td>{evalData.recall}</td>
-            </tr>
-            <tr>
-              <td className="font-semibold">F1 Score:</td>
-              <td>{evalData.f1Score}</td>
-            </tr>
-            <tr>
-              <td className="font-semibold">AUC:</td>
-              <td>{evalData.auc}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="flex justify-between">
-          <button
-            onClick={handleRepeatEvaluation}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Repeat Evaluation
-          </button>
-          <button
-            onClick={handleProceedToRetraining}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-          >
-            Proceed to Retraining
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 };
-
+  
 const ModelUploadPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
+  const [codeFile, setCodeFile] = useState<File | null>(null);
   const [modelName, setModelName] = useState('');
   const [modality, setModality] = useState('');
   const [dataIntegrityTags, setDataIntegrityTags] = useState<string[]>([]);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const router = useRouter();
+  const { user, isAuthenticated, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push('/auth');
+    }
+  }, [isAuthenticated, loading, router]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -141,14 +105,56 @@ const ModelUploadPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const dataIntegrityCheck = dataIntegrityTags.join(',');
-    console.log('Submitting:', { file, modelName, modality, dataIntegrityCheck });
-    // Here you would typically handle the file upload and metadata submission
-    // After successful upload, open the lightbox with evaluation results
-    setIsLightboxOpen(true);
+  const handleCodeFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setCodeFile(e.target.files[0]);
+    }
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    const formData = new FormData();
+    if (file) {
+      formData.append('file', file);
+    }
+    if (codeFile) {
+      formData.append('codeFile', codeFile);
+    }
+    formData.append('modelName', modelName);
+    formData.append('modality', modality);
+    formData.append('dataIntegrityTags', JSON.stringify(dataIntegrityTags));
+    formData.append('userId', user.id);
+    formData.append('username', user.email);
+    formData.append('lastUpdated', new Date().toISOString());
+
+    try {
+      const response = await fetch('/api/upload-model', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        router.push('/dashboard');
+      } else {
+        console.error('Failed to upload model');
+      }
+    } catch (error) {
+      console.error('Error uploading model:', error);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -167,6 +173,19 @@ const ModelUploadPage: React.FC = () => {
               <label className="bg-gray-200 text-gray-800 px-4 py-2 rounded cursor-pointer hover:bg-gray-300">
                 Choose Weights File
                 <input type="file" onChange={handleFileChange} className="hidden" />
+              </label>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <input
+                type="text"
+                value={codeFile ? codeFile.name : 'Model Class Implementation'}
+                readOnly
+                className="flex-grow p-2 border border-gray-300 rounded"
+              />
+              <label className="bg-gray-200 text-gray-800 px-4 py-2 rounded cursor-pointer hover:bg-gray-300">
+                Choose Code File
+                <input type="file" onChange={handleCodeFileChange} className="hidden" />
               </label>
             </div>
 
@@ -190,7 +209,7 @@ const ModelUploadPage: React.FC = () => {
                   value={modality}
                   onChange={(e) => setModality(e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded"
-                  placeholder="Vision, Language, ext, Voice, Multimodal, etc."
+                  placeholder="Vision, Language, Voice, Multimodal, etc."
                 />
               </div>
               <div>
@@ -200,24 +219,19 @@ const ModelUploadPage: React.FC = () => {
             </div>
 
             <div className="flex space-x-4">
-              <button
+            <button
                 type="submit"
                 className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700"
               >
-                Proceed with Evaluation
+                Upload Model
               </button>
-              <Link href="/" className="bg-gray-300 text-gray-800 px-6 py-2 rounded hover:bg-gray-400">
-                Back Home
+              <Link href="/dashboard" className="bg-gray-300 text-gray-800 px-6 py-2 rounded hover:bg-gray-400">
+                Back to Dashboard
               </Link>
             </div>
           </form>
         </div>
       </main>
-      <EvaluationResultsLightbox
-        isOpen={isLightboxOpen}
-        onClose={() => setIsLightboxOpen(false)}
-        evalData={placeholderEvalData}
-      />
     </div>
   );
 };

@@ -8,17 +8,18 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-    "dev:client": "npm run dev --workspace=client",
-    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
     "build": "npm run build --workspaces",
     "start": "npm run start --workspace=server"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "pg": "^8.12.0",
     "concurrently": "^8.2.0"
   },
   "dependencies": {
-    "pg": "^8.12.0"
+    "@aws-sdk/client-dynamodb": "^3.622.0",
+    "@aws-sdk/lib-dynamodb": "^3.622.0",
+    "dotenv": "^16.4.5",
+    "mssql": "^11.0.1"
   }
 }

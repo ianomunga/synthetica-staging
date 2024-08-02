@@ -1,19 +1,25 @@
+-- Users Table
 CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  name TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    username VARCHAR(255) PRIMARY KEY,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(255)
 );
 
+-- Models Table
 CREATE TABLE models (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id),
-  name TEXT NOT NULL,
-  status TEXT,
-  performance_metrics JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    model_name VARCHAR(255) PRIMARY KEY,
+    status VARCHAR(10) CHECK (status IN ('Active', 'Inactive')),
+    last_updated DATE,
+    metadata VARBINARY(MAX),
+    eval_metrics NVARCHAR(MAX),
+    data_filters NVARCHAR(MAX)
 );
 
-CREATE INDEX idx_models_user_id ON models(user_id);
+-- User_Models Table (for many-to-many relationship)
+CREATE TABLE user_models (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    username VARCHAR(255),
+    model_name VARCHAR(255),
+    FOREIGN KEY (username) REFERENCES users(username),
+    FOREIGN KEY (model_name) REFERENCES models(model_name)
+);

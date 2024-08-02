@@ -1,11 +1,10 @@
 // client/src/components/Dashboard/ModelList.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import Navbar from '../../components/Navbar';
 
 interface Model {
-  id: string;
-  name: string;
+  SK: string;
+  modelName: string;
   status: string;
   lastUpdated: string;
 }
@@ -16,47 +15,66 @@ interface ModelListProps {
 
 const ModelList: React.FC<ModelListProps> = ({ onSelectModel }) => {
   const [models, setModels] = useState<Model[]>([]);
-  const { isAuthenticated } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuth();
+
+  const fetchModels = useCallback(async () => {
+    console.log('Fetching models. IsAuthenticated:', isAuthenticated, 'User:', user);
+    if (isAuthenticated && user?.email) {
+      try {
+        const response = await fetch(`/api/get-user-models?email=${encodeURIComponent(user.email)}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch models');
+        }
+        const data = await response.json();
+        console.log('Fetched models:', data.models);
+        setModels(data.models);
+        setError(null);
+      } catch (error) {
+        console.error('Error fetching models:', error);
+        setModels([]);
+        setError('Failed to fetch models. Please try again later.');
+      }
+    }
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchModels();
-    }
-  }, [isAuthenticated]);
+    fetchModels();
+  }, [fetchModels]);
 
-  const fetchModels = async () => {
-    // Mock data for now
-    const mockModels: Model[] = [
-      { id: '1', name: 'Model A', status: 'Active', lastUpdated: '2023-05-15' },
-      { id: '2', name: 'Model B', status: 'Inactive', lastUpdated: '2023-05-10' },
-      { id: '3', name: 'Model C', status: 'Active', lastUpdated: '2023-05-05' },
-    ];
-    setModels(mockModels);
-  };
+  console.log('Rendering ModelList. Models:', models, 'Error:', error);
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <div className="bg-white shadow rounded-lg p-4">
       <h2 className="text-xl font-semibold mb-4">Your Models</h2>
-      <ul className="divide-y divide-gray-200">
-        {models.map((model) => (
-          <li key={model.id} className="py-4">
-            <button
-              onClick={() => onSelectModel(model.id)}
-              className="w-full text-left hover:bg-gray-50 p-2 rounded transition duration-150 ease-in-out"
-            >
-              <div className="flex justify-between">
-                <span className="font-medium">{model.name}</span>
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  model.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {model.status}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 mt-1">Last updated: {model.lastUpdated}</p>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {models.length === 0 ? (
+        <p>No models found. Upload a model to get started!</p>
+      ) : (
+        <ul className="space-y-4">
+          {models.map((model) => (
+            <li key={model.SK} className="border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-150 ease-in-out">
+              <button
+                onClick={() => onSelectModel(model.modelName)}
+                className="w-full text-left p-4"
+              >
+                <div className="flex flex-wrap justify-between items-center mb-3">
+                  <span className="font-medium text-m  mr-2">{model.modelName}</span>
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    model.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {model.status}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500">Last updated: {new Date(model.lastUpdated).toLocaleString()}</p>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
