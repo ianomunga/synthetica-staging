@@ -63,7 +63,7 @@ const MultiSelect: React.FC<{
     </div>
   );
 };
-
+/*
 const EvaluationResultsLightbox: React.FC<{ isOpen: boolean, onClose: () => void, evalData: any }> = ({ isOpen, onClose, evalData }) => {
   const router = useRouter();
 
@@ -81,7 +81,7 @@ const EvaluationResultsLightbox: React.FC<{ isOpen: boolean, onClose: () => void
     router.push('/retrain');
   };
 }
-  
+*/  
 const ModelUploadPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [codeFile, setCodeFile] = useState<File | null>(null);
