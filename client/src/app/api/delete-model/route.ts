@@ -50,9 +50,10 @@ export async function POST(request: Request) {
     };
     await docClient.send(new DeleteCommand(dynamoParams));
 
+    console.log(`Model ${modelName} deleted successfully for user ${userId}`);
     return NextResponse.json({ message: 'Model deleted successfully' });
   } catch (error) {
     console.error('Error deleting model:', error);
-    return NextResponse.json({ message: 'Error deleting model' }, { status: 500 });
+    return NextResponse.json({ message: 'Error deleting model', error: String(error) }, { status: 500 });
   }
 }

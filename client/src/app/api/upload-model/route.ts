@@ -1,10 +1,13 @@
-// client/src/app/api/upload-model/route.ts
+
 import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { Readable } from 'stream';
-import { correctPKFormat } from '../../../../../server/src/lib/dbUtils';
+import { DynamoDBDocumentClient, PutCommand, ScanCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+
+const execAsync = promisify(exec);
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION,
@@ -23,6 +26,51 @@ const dynamoClient = new DynamoDBClient({
 });
 
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
+
+async function migrateData(docClient: DynamoDBDocumentClient, tableName: string, userId: string, modelName: string) {
+  const oldPK = `USER#USER#${userId}`;
+  const newPK = `USER#${userId}`;
+  const SK = `MODEL#${modelName}`;
+
+  const scanCommand = new ScanCommand({
+    TableName: tableName,
+    FilterExpression: "PK = :pk AND SK = :sk",
+    ExpressionAttributeValues: {
+      ":pk": oldPK,
+      ":sk": SK
+    }
+  });
+
+  const scanResponse = await docClient.send(scanCommand);
+
+  if (scanResponse.Items && scanResponse.Items.length > 0) {
+    const item = scanResponse.Items[0];
+    
+    // Create new item with correct PK
+    const putCommand = new PutCommand({
+      TableName: tableName,
+      Item: {
+        ...item,
+        PK: newPK
+      }
+    });
+
+    await docClient.send(putCommand);
+
+    // Delete old item
+    const deleteCommand = new DeleteCommand({
+      TableName: tableName,
+      Key: {
+        PK: oldPK,
+        SK: SK
+      }
+    });
+
+    await docClient.send(deleteCommand);
+
+    console.log(`Migrated item for model: ${modelName}`);
+  }
+}
 
 export async function POST(request: Request) {
     const formData = await request.formData();
@@ -61,10 +109,10 @@ export async function POST(request: Request) {
         const threeMonthsAgo = new Date();
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
         const status = new Date(lastUpdated) > threeMonthsAgo ? 'Active' : 'Inactive';
-    
+
         // Save model metadata to DynamoDB
         const dynamoParams = {
-          TableName: process.env.DYNAMODB_TABLE_NAME,
+          TableName: process.env.DYNAMODB_TABLE_NAME!,
           Item: {
             PK: `USER#${userId}`,
             SK: `MODEL#${modelName}`,
@@ -81,15 +129,21 @@ export async function POST(request: Request) {
         console.log('Saving to DynamoDB:', dynamoParams);
         await docClient.send(new PutCommand(dynamoParams));
 
-        // Correct PK format if necessary
-        await correctPKFormat(docClient, process.env.DYNAMODB_TABLE_NAME!, userId, modelName);
+        // Run migration script
+        try {
+            const scriptPath = path.join(process.cwd(), 'scripts', 'migrate-dynamodb.ts');
+            const { stdout, stderr } = await execAsync(`npx ts-node "${scriptPath}"`);
+            console.log('Migration script output:', stdout);
+            if (stderr) console.error('Migration script error:', stderr);
+        } catch (error) {
+            console.error('Error running migration script:', error);
+        }
 
-        console.log('Model uploaded successfully');
-        return NextResponse.json({ message: 'Model uploaded successfully' });
-      } catch (error) {
+        console.log('Model uploaded and migration attempted');
+        return NextResponse.json({ message: 'Model uploaded and migration attempted' });
+    } catch (error) {
         console.error('Error uploading model:', error);
         return NextResponse.json({ message: 'Error uploading model' }, { status: 500 });
-      }
     }
+}
 
-    

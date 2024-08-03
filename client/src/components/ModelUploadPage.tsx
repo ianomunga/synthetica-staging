@@ -88,7 +88,8 @@ const ModelUploadPage: React.FC = () => {
   const [modelName, setModelName] = useState('');
   const [modality, setModality] = useState('');
   const [dataIntegrityTags, setDataIntegrityTags] = useState<string[]>([]);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadComplete, setUploadComplete] = useState(false);
   const router = useRouter();
   const { user, isAuthenticated, loading } = useAuth();
 
@@ -109,6 +110,20 @@ const ModelUploadPage: React.FC = () => {
     if (e.target.files) {
       setCodeFile(e.target.files[0]);
     }
+  };
+
+  //we'd normally get server progress data, but it's expensive, so we'll simulate it for now
+  const simulateProgress = (setProgress: (progress: number) => void) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 5;
+      if (progress >= 100) {
+        clearInterval(interval);
+        setProgress(100);
+      } else {
+        setProgress(progress);
+      }
+    }, 200);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,6 +147,9 @@ const ModelUploadPage: React.FC = () => {
     formData.append('username', user.email);
     formData.append('lastUpdated', new Date().toISOString());
 
+    setUploadProgress(0);
+    simulateProgress(setUploadProgress);
+
     try {
       const response = await fetch('/api/upload-model', {
         method: 'POST',
@@ -139,12 +157,18 @@ const ModelUploadPage: React.FC = () => {
       });
 
       if (response.ok) {
-        router.push('/dashboard');
+        setUploadProgress(100);
+        setUploadComplete(true);
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
       } else {
         console.error('Failed to upload model');
+        setUploadProgress(0);
       }
     } catch (error) {
       console.error('Error uploading model:', error);
+      setUploadProgress(0);
     }
   };
 
@@ -155,6 +179,7 @@ const ModelUploadPage: React.FC = () => {
   if (!isAuthenticated) {
     return null;
   }
+
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -219,7 +244,7 @@ const ModelUploadPage: React.FC = () => {
             </div>
 
             <div className="flex space-x-4">
-            <button
+              <button
                 type="submit"
                 className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700"
               >
@@ -230,6 +255,24 @@ const ModelUploadPage: React.FC = () => {
               </Link>
             </div>
           </form>
+          
+          {uploadProgress > 0 && !uploadComplete && (
+            <div className="mt-4">
+              <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full" 
+                  style={{width: `${uploadProgress}%`}}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">Upload progress: {uploadProgress}%</p>
+            </div>
+          )}
+          
+          {uploadComplete && (
+            <div className="mt-4 text-green-600 font-semibold">
+              Upload Complete! Redirecting to dashboard...
+            </div>
+          )}
         </div>
       </main>
     </div>

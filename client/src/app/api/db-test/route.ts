@@ -1,3 +1,4 @@
+//client\src\app\api\db-test\route.ts
 import { NextResponse } from 'next/server';
 import { DynamoDBClient, DynamoDBClientConfig } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";

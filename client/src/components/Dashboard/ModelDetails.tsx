@@ -1,29 +1,39 @@
 // client/src/components/Dashboard/ModelDetails.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { getModelDetails, updateModelStatus, Model } from '../../../../server/src/lib/db';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../hooks/useAuth';
+import { Model } from '../../../../server/src/lib/db';
+import { FiRefreshCw, FiChevronUp, FiChevronDown } from 'react-icons/fi';
 
 interface ModelDetailsProps {
   modelId: string;
   onDelete: (modelName: string) => void;
+  onRefresh: () => void;
+  onNavigate: (direction: 'up' | 'down') => void;
 }
 
-const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete }) => {
+const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete, onRefresh, onNavigate }) => {
   const [model, setModel] = useState<Model | null>(null);
-  const { user, isAuthenticated } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
   const router = useRouter();
 
   const fetchModelDetails = useCallback(async () => {
-    if (isAuthenticated && user?.email && modelId) {
+    if (user?.email && modelId) {
       try {
-        const modelDetails = await getModelDetails(user.email, modelId);
-        setModel(modelDetails || null);
+        const response = await fetch(`/api/get-model-details?email=${encodeURIComponent(user.email)}&modelName=${encodeURIComponent(modelId)}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch model details');
+        }
+        const modelDetails = await response.json();
+        setModel(modelDetails);
+        setError(null);
       } catch (error) {
         console.error('Error fetching model details:', error);
+        setError('Failed to fetch model details. Please try again later.');
       }
     }
-  }, [isAuthenticated, user, modelId]);
+  }, [user, modelId]);
 
   useEffect(() => {
     fetchModelDetails();
@@ -32,10 +42,24 @@ const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete }) => {
   const handleStatusChange = async (newStatus: string) => {
     if (user?.email && model) {
       try {
-        await updateModelStatus(user.email, model.modelName, newStatus);
+        const response = await fetch('/api/update-model-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: user.email,
+            modelName: model.modelName,
+            status: newStatus,
+          }),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to update model status');
+        }
         fetchModelDetails();
       } catch (error) {
         console.error('Error updating model status:', error);
+        setError('Failed to update model status. Please try again later.');
       }
     }
   };
@@ -44,16 +68,53 @@ const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete }) => {
     router.push(`/retrain/${modelId}`);
   };
 
-  const handleDelete = () => {
-    if (model) {
-      onDelete(model.modelName);
+  const handleDelete = async () => {
+    if (model && user) {
+      try {
+        const response = await fetch('/api/delete-model', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.id, modelName: model.modelName }),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete model');
+        }
+        onDelete(model.modelName);
+        onRefresh();
+      } catch (error) {
+        console.error('Error deleting model:', error);
+        setError('Failed to delete model. Please try again later.');
+      }
     }
   };
+
+  const handleRefresh = () => {
+    fetchModelDetails();
+    onRefresh();
+  };
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
 
   if (!model) return <div>Loading...</div>;
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <div className="bg-white shadow rounded-lg p-6 relative">
+      <div className="absolute top-5 right-2 flex space-x-2">
+        <button onClick={handleRefresh} className="p-1 hover:bg-gray-100 rounded">
+          <FiRefreshCw className="w-5 h-5 text-gray-600" />
+        </button>
+        <button onClick={() => onNavigate('up')} className="p-1 hover:bg-gray-100 rounded">
+          <FiChevronUp className="w-5 h-5 text-gray-600" />
+        </button>
+        <button onClick={() => onNavigate('down')} className="p-1 hover:bg-gray-100 rounded">
+          <FiChevronDown className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+      
       <h2 className="text-2xl font-semibold mb-4">{model.modelName}</h2>
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
@@ -95,19 +156,19 @@ const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete }) => {
           onClick={() => handleStatusChange(model.status === 'Active' ? 'Inactive' : 'Active')}
           className={`${
             model.status === 'Active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
-          } text-white font-bold py-2 px-4 rounded`}
+          } text-white py-2 px-4 rounded`}
         >
           {model.status === 'Active' ? 'Deactivate' : 'Activate'}
         </button>
         <button 
           onClick={handleRetrain}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
         >
           Retrain
         </button>
         <button 
           onClick={handleDelete}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
         >
           Delete
         </button>
