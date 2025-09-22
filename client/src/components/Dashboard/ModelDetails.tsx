@@ -5,7 +5,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { Model } from '../../../../server/src/lib/db';
+import type { IconType } from "react-icons";
 import { FiRefreshCw, FiChevronUp, FiChevronDown } from 'react-icons/fi';
+
+const RefreshIcon: IconType = FiRefreshCw;
+const UpIcon: IconType = FiChevronUp;
+const DownIcon: IconType = FiChevronDown;
 
 interface ModelDetailsProps {
   modelId: string;
@@ -104,18 +109,17 @@ const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete, onRefres
   if (!model) return <div>Loading...</div>;
 
   return (
-    <div className="bg-white shadow rounded-lg p-6 relative">
-      <div className="absolute top-5 right-2 flex space-x-2">
-        <button onClick={handleRefresh} className="p-1 hover:bg-gray-100 rounded">
-          <FiRefreshCw className="w-5 h-5 text-gray-600" />
-        </button>
-        <button onClick={() => onNavigate('up')} className="p-1 hover:bg-gray-100 rounded">
-          <FiChevronUp className="w-5 h-5 text-gray-600" />
-        </button>
-        <button onClick={() => onNavigate('down')} className="p-1 hover:bg-gray-100 rounded">
-          <FiChevronDown className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
+    <div className="absolute top-5 right-2 flex space-x-2">
+      <button onClick={handleRefresh} className="p-1 hover:bg-gray-100 rounded">
+        <RefreshIcon className="w-5 h-5 text-gray-600" />
+      </button>
+      <button onClick={() => onNavigate('up')} className="p-1 hover:bg-gray-100 rounded">
+        <UpIcon className="w-5 h-5 text-gray-600" />
+      </button>
+      <button onClick={() => onNavigate('down')} className="p-1 hover:bg-gray-100 rounded">
+        <DownIcon className="w-5 h-5 text-gray-600" />
+      </button>
+    </div>
       
       <h2 className="text-2xl font-semibold mb-4">{model.modelName}</h2>
       <div className="grid grid-cols-2 gap-4 mb-6">
