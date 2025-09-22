@@ -5,12 +5,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { Model } from '../../../../server/src/lib/db';
-import type { IconType } from "react-icons";
+import type { IconType } from 'react-icons';
 import { FiRefreshCw, FiChevronUp, FiChevronDown } from 'react-icons/fi';
-
-const RefreshIcon: IconType = FiRefreshCw;
-const UpIcon: IconType = FiChevronUp;
-const DownIcon: IconType = FiChevronDown;
 
 interface ModelDetailsProps {
   modelId: string;
@@ -18,6 +14,11 @@ interface ModelDetailsProps {
   onRefresh: () => void;
   onNavigate: (direction: 'up' | 'down') => void;
 }
+
+// ✅ Wrap icons in typed variables so TS treats them as valid JSX components
+const RefreshIcon: IconType = FiRefreshCw;
+const UpIcon: IconType = FiChevronUp;
+const DownIcon: IconType = FiChevronDown;
 
 const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete, onRefresh, onNavigate }) => {
   const [model, setModel] = useState<Model | null>(null);
@@ -28,7 +29,9 @@ const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete, onRefres
   const fetchModelDetails = useCallback(async () => {
     if (user?.email && modelId) {
       try {
-        const response = await fetch(`/api/get-model-details?email=${encodeURIComponent(user.email)}&modelName=${encodeURIComponent(modelId)}`);
+        const response = await fetch(
+          `/api/get-model-details?email=${encodeURIComponent(user.email)}&modelName=${encodeURIComponent(modelId)}`
+        );
         if (!response.ok) {
           throw new Error('Failed to fetch model details');
         }
@@ -109,25 +112,28 @@ const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete, onRefres
   if (!model) return <div>Loading...</div>;
 
   return (
-    <div className="absolute top-5 right-2 flex space-x-2">
-      <button onClick={handleRefresh} className="p-1 hover:bg-gray-100 rounded">
-        <RefreshIcon className="w-5 h-5 text-gray-600" />
-      </button>
-      <button onClick={() => onNavigate('up')} className="p-1 hover:bg-gray-100 rounded">
-        <UpIcon className="w-5 h-5 text-gray-600" />
-      </button>
-      <button onClick={() => onNavigate('down')} className="p-1 hover:bg-gray-100 rounded">
-        <DownIcon className="w-5 h-5 text-gray-600" />
-      </button>
-    </div>
-      
+    <div className="bg-white shadow rounded-lg p-6 relative">
+      <div className="absolute top-5 right-2 flex space-x-2">
+        <button onClick={handleRefresh} className="p-1 hover:bg-gray-100 rounded">
+          <RefreshIcon className="w-5 h-5 text-gray-600" />
+        </button>
+        <button onClick={() => onNavigate('up')} className="p-1 hover:bg-gray-100 rounded">
+          <UpIcon className="w-5 h-5 text-gray-600" />
+        </button>
+        <button onClick={() => onNavigate('down')} className="p-1 hover:bg-gray-100 rounded">
+          <DownIcon className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+
       <h2 className="text-2xl font-semibold mb-4">{model.modelName}</h2>
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
           <p className="text-sm font-medium text-gray-500">Status</p>
-          <p className={`mt-1 text-sm ${
-            model.status === 'Active' ? 'text-green-600' : 'text-red-600'
-          }`}>
+          <p
+            className={`mt-1 text-sm ${
+              model.status === 'Active' ? 'text-green-600' : 'text-red-600'
+            }`}
+          >
             {model.status}
           </p>
         </div>
@@ -158,21 +164,25 @@ const ModelDetails: React.FC<ModelDetailsProps> = ({ modelId, onDelete, onRefres
         </div>
       )}
       <div className="mt-6 flex justify-end space-x-3">
-        <button 
-          onClick={() => handleStatusChange(model.status === 'Active' ? 'Inactive' : 'Active')}
+        <button
+          onClick={() =>
+            handleStatusChange(model.status === 'Active' ? 'Inactive' : 'Active')
+          }
           className={`${
-            model.status === 'Active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+            model.status === 'Active'
+              ? 'bg-red-600 hover:bg-red-700'
+              : 'bg-green-600 hover:bg-green-700'
           } text-white py-2 px-4 rounded`}
         >
           {model.status === 'Active' ? 'Deactivate' : 'Activate'}
         </button>
-        <button 
+        <button
           onClick={handleRetrain}
           className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
         >
           Retrain
         </button>
-        <button 
+        <button
           onClick={handleDelete}
           className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
         >
