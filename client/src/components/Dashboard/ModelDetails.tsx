@@ -1,4 +1,6 @@
 // client/src/components/Dashboard/ModelDetails.tsx
+
+'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
